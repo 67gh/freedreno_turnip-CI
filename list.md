@@ -1,19 +1,31 @@
-| Name                                            | Status | Notes                                                                                                                     |
-|-------------------------------------------------|--------|---------------------------------------------------------------------------------------------------------------------------|
-| Genshin Impact                                  | ✅     | MiHoYo has announced official vulkan support for several high end GPU models listed in `vulkan_gpu_list_config.txt`       |
-| Fortnite Mobile                                 | ✅     | Fortnite uses Vulkan by default on supported devices since UE5 upgrade.                                                   |
-| 3D Mark                                         | ✅     |                                                                                                                           |
-| GRID™ Autosport                                 | ✅     | Tested by [V3KT0R-87](//github.com/V3KT0R-87)                                                                             |
-| SpongeBob SquarePants Battle For Bikini Bottom  | ✅     | Tested by [V3KT0R-87](//github.com/V3KT0R-87)<br>Poor performance.                                                        |
-| Carx Street                                     | ✅     | Tested by [V3KT0R-87](//github.com/V3KT0R-87)                                                                             |
-| Dolphin Emulator                                | ✅     | Tested by [V3KT0R-87](//github.com/V3KT0R-87)<br>                                                                         |
-| PPSSPP                                          | ✅     | Tested by [V3KT0R-87](//github.com/V3KT0R-87)                                                                             |
-| EggNS                                           | ✅     | Tested by [V3KT0R-87](//github.com/V3KT0R-87)<br>Poor performance.                                                        |
-| ANGLE (com.android.angle)                       | ✅     |                                                                                                                           |
-| ARK: Survival Evolved                           | ✅     |                                                                                                                           |
-| Revelation M -CBT                               | ❌     | Fallbacks to OpenGL ES, work with proprietary adreno libraries.                                                           |
-| TauCeti Vulkan Technology Benchmark             | ✅     | Poor performance.                                                                                                         |
-| COD Warzone                                     | ✅     | Poor performance, The game map initialized with Black and White colors and textures getting loaded in several minutes.    |
-| GTA Trilogy - Definitive Edition                | ✅     | Tested by [@V3KT0R-87](//github.com/V3KT0R-87)<br>Working, Poor Performance.                                              |
-| Hitman Blood Money : Reprisal                   | ✅     | Tested by [@V3KT0R-87](//github.com/V3KT0R-87)<br>Working, 60 fps Medium Graphics.                                        |
-* Majority of games based on `Unity` or `Unreal Engine(UE4/UE5)` are working.
+# Témoignages historiques — pas une validation du build actuel
+
+Ce tableau conserve les observations de l’archive d’origine, alors référencées
+sous « Magisk ». Les versions de jeux, appareils, dates, pilotes et méthodes de
+mesure n’étaient pas précisées. Aucun résultat ne valide le paquet actuel pour
+Adreno Tools ni spécifiquement l’Adreno 660. Il faut refaire les essais.
+
+| Application | Observation historique | Réserve ou attribution d’origine |
+|---|---|---|
+| Genshin Impact | Fonctionnement déclaré | Prise en charge Vulkan évoquée, configuration non fournie |
+| Fortnite Mobile | Fonctionnement déclaré | Vulkan évoqué sur appareils compatibles, version non précisée |
+| 3D Mark | Fonctionnement déclaré | Aucun score ni protocole |
+| GRID Autosport | Fonctionnement déclaré | V3KT0R-87 |
+| SpongeBob SquarePants Battle For Bikini Bottom | Fonctionnement avec performances faibles | V3KT0R-87 |
+| Carx Street | Fonctionnement déclaré | V3KT0R-87 |
+| Dolphin Emulator | Fonctionnement déclaré | V3KT0R-87 |
+| PPSSPP | Fonctionnement déclaré | V3KT0R-87 |
+| EggNS | Fonctionnement avec performances faibles | V3KT0R-87 |
+| ANGLE (com.android.angle) | Fonctionnement déclaré | Configuration non fournie |
+| ARK: Survival Evolved | Fonctionnement déclaré | Configuration non fournie |
+| Revelation M - CBT | Échec déclaré | Retour OpenGL ES ; fonctionnement évoqué avec pilote propriétaire |
+| TauCeti Vulkan Technology Benchmark | Performances faibles | Aucune mesure |
+| COD Warzone | Rendu dégradé et chargements longs | Couleurs noir/blanc et textures tardives |
+| GTA Trilogy - Definitive Edition | Performances faibles | V3KT0R-87 |
+| Hitman Blood Money: Reprisal | 60 fps, qualité moyenne déclarés | V3KT0R-87 ; appareil et scène absents |
+
+Auteur historique cité : [V3KT0R-87](https://github.com/V3KT0R-87).
+Aucune conclusion générale sur la majorité des jeux Unity/Unreal ne découle de
+ces témoignages. Un nouvel essai doit noter : appareil/GPU, Android, application
+et jeu avec leurs versions, packageVersion, API Vulkan observée, scène, réglages,
+FPS/stabilité, anomalies et logs récents.

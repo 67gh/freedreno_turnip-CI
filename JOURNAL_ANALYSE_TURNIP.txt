@@ -1,0 +1,301 @@
+JOURNAL D’ANALYSE — freedreno_turnip-CI.zip
+Date : 9 octobre 2026
+Source : archive fournie par l’utilisateur, copie locale inchangée.
+Méthode : lecture intégrale des fichiers texte ; commentaires par lignes ou blocs contigus ; contrôles structurels pour les fichiers binaires Git. Chaque section est ajoutée après lecture du fichier. Les lignes vides séparent les blocs et ne changent pas le comportement.
+Aucune correction des sources demandée ni effectuée. Pas de compilation réelle du pilote, ni essai sur téléphone. Ne pas confondre analyse statique, reproduction isolée et validation du pilote.
+Légende : CERTAIN = visible dans les sources ou reproduit ; CONDITIONNEL = dépend de l’environnement ; NON DÉMONTRÉ = affirmation non prouvée par cette archive.
+
+01 — turnip_builder.sh — 153 lignes — LU INTÉGRALEMENT
+Rôle : télécharger NDK et Mesa, compiler Turnip Android ARM64/KGSL, changer le SONAME et produire un ZIP pour un chargeur compatible Adreno Tools.
+L1 : demande bash -e par le shebang. PROBLÈME CERTAIN : la commande documentée « bash ./turnip_builder.sh » ignore cette option du shebang. Aucun « set -e » interne. Dans ce mode, un échec de téléchargement, changement de répertoire, Meson, Ninja, copie ou patchelf peut être suivi d’autres commandes. L’arrêt immédiat n’est assuré que lorsque -e est effectivement activé (invocation adéquate).
+L3-5 : couleurs ANSI ; sans conséquence sur le pilote.
+L6 : liste des exécutables requis. ccache est utilisé L75-76 sans être testé ; /usr/bin/pkg-config est utilisé L80 sans être testé. La liste exige glslang ET glslangValidator : leur coexistence doit être vérifiée pour la distribution visée ; ne pas présumer qu’un paquet portant un nom fournit les deux commandes.
+L7 : répertoire fixé à partir du répertoire courant, pas de celui du script ; fonctionne seulement si l’utilisateur comprend où les fichiers seront créés. Relances dans le même dossier non isolées.
+L8-10 : NDK r29, chaîne Linux x86_64, niveau API Android 34. Hôte Linux ARM64 non pris en charge par cette configuration ; README trop général. Le niveau 34 restreint les appareils admissibles au paquet.
+L11-12 : téléchargement de Mesa main non figé. La présence de main ne garantit ni la version Vulkan effectivement exposée sur un appareil, ni une compilation durable. Aucun identifiant de commit ni empreinte de source enregistré.
+L14 : clear exécuté avant les contrôles ; peut échouer sans TERM/terminfo. Avec -e actif, peut arrêter une exécution non interactive ; sans -e, produit seulement une erreur.
+L16-21 : orchestration en quatre étapes ; aucun contrôle explicite de leur résultat par run_all.
+L23-37 : teste les commandes puis sort si un manque a été enregistré. deps_missing non initialisé/réinitialisé : une valeur héritée égale à 1 peut provoquer un faux échec. L’absence de commande est bien fatale par exit 1, même sans -e.
+L38-39 : installation Mako via pip global, sortie et erreur supprimées. Risque de refus dans un Python géré par la distribution ; pas de venv, ni vérification que pip correspond au Python de Meson. Installer Mako sans version rend aussi la dépendance variable.
+L42-44 : mkdir puis cd via $_. Fonctionne en Bash dans ce contexte, mais fragile à une réécriture ; un cd raté n’est pas contrôlé lorsque -e est absent.
+L45-48 : téléchargement NDK sans --fail, reprise, empreinte ou journal visible. Un statut HTTP d’erreur peut être enregistré comme ZIP ; unzip masqué. Une seconde extraction peut demander si des fichiers doivent être écrasés.
+L49-53 : curl -L suit les redirections de Mesa, mais sans --fail. Extraction masquée et nom mesa-main imposé. Un échec de cd peut laisser la suite travailler au mauvais endroit.
+L56-60 : crée des alias cc/c++ vers clang du NDK et modifie PATH globalement.
+L61-70 : définit les outils et drapeaux globaux. CFLAGS/CXXFLAGS=-O3 ; LDFLAGS ThinLTO et page maximale 16 Kio. Les variables de compilation croisée ne remplacent pas une configuration native correcte. Une option de lien seule ne prouve pas la compatibilité Android 16 Kio de l’ensemble du paquet et de son chargeur.
+L72-87 : fichier Meson pour Android ARM64. ccache nommé comme wrapper (voir nuance B.5). API 34 intégrée aux wrappers Clang. L79 utilise aarch64-linux-android-strip au lieu de llvm-strip utilisé L65 : vérifier cet exécutable dans le NDK r29 ; incohérence à risque à l’étape strip. L80 enferme pkg-config dans un chemin du répertoire bin du NDK, dont aucun contenu .pc n’est préparé par le script. Les dépendances trouvées doivent être examinées dans le log de Meson.
+L89-101 : fichier natif : les outils c/cpp/ar/strip/c_ld/cpp_ld sont rangés sous [build_machine], pas sous [binaries]. La sélection explicite des outils natifs n’est donc pas exprimée dans la bonne section. La découverte automatique via PATH peut masquer cette faute. Confirmé par documentation Meson, voir complément B.1.
+L103-119 : configuration release, assertions désactivées, LTO thin, Android stub, sans Gallium ni EGL, Turnip freedreno/KGSL et extensions beta. Pas de patch A660, pas de drapeau spécifique Adreno 660. allow-broken-lto n’assure pas le bon fonctionnement de la combinaison. Les options applicatives dépendent du Mesa main téléchargé, absent du ZIP : compatibilité exacte non vérifiée. Le journal redirigé est turnip_workdir/meson_log.
+L121 : Ninja écrit ninja_log, sans diffusion console ni contrôle explicite de son code retour.
+L123-125 : teste seulement l’existence de la bibliothèque. Une bibliothèque d’une ancienne compilation peut satisfaire ce test malgré un échec courant. Avec -e réellement actif, un échec Meson/Ninja peut arrêter avant le message explicatif L124.
+L128-132 : copie la bibliothèque et change le SONAME. Le nom a660_final n’établit aucune optimisation spécifique. Aucun contrôle explicite de cp/patchelf lorsque -e est absent.
+L133-145 : génère meta.json. « full LTO » contredit -Db_lto_mode=thin et -flto=thin. « MAX PERF », « tuned for Adreno 660 » et Vulkan 1.4 ne sont pas démontrés. Version du paquet constante 1 ; version du pilote fondée sur la date, sans commit Mesa. Deux builds du même jour sont indiscernables par cette version. minApi=34 cohérent avec la cible déclarée mais non expliqué dans README. Compatibilité du schéma exact à valider avec le chargeur destinataire, qui n’est pas fourni.
+L146-150 : zip actualise une archive préexistante ; ne garantit pas un paquet neuf. Test final d’existence seulement : un ancien ZIP peut être annoncé réussi après un échec actuel. Ni zip -T, ni inspection ELF, dépendances dynamiques, alignement après patchelf, ni validation JSON/chargement. La bibliothèque est modifiée après le lien : contrôler le résultat final.
+L153 : exécute immédiatement run_all, sans interface d’options.
+Verdict : pipeline fragile, reproductibilité absente, promesses de performances et compatibilité non établies. Les cas conditionnels demandent vérification ; ne pas annoncer que tous se produisent systématiquement.
+
+02 — .github/workflows/turnip_builder.yml — 54 lignes — LU INTÉGRALEMENT
+Rôle : lancement manuel ou programmé, préparation Ubuntu, compilation, manifeste de mise à jour, journaux et publication GitHub Release.
+L1-6 : nom A660, workflow_dispatch, cron 20 5 1,15 * * : exécutions prévues à 05:20 UTC les 1er et 15, pas hebdomadaires ni 06:00 UTC.
+L8-9 : permission contents:write utile à la publication ; accordée globalement. Observation de périmètre, pas cause du blocage de build.
+L11-15 : Ubuntu 24.04 et checkout v3 ; version ancienne, pas preuve en soi d’un échec. Actions externes non incluses dans le ZIP.
+L17-22 : active deb-src par substitution exacte dans ubuntu.sources ; dépend de la forme du fichier du runner. apt build-dep installe les dépendances du Mesa empaqueté pour Ubuntu, pas nécessairement celles de Mesa main. Seuls meson/ninja sont explicitement installés ensuite ; ccache/patchelf et tous les outils réclamés par le script ne sont pas garantis par ce texte.
+L24-25 : BLOQUANT CERTAIN : appelle bash ./turnip_a660_final.sh, absent de l’archive et des fichiers suivis actuels. Le script réel s’appelle turnip_builder.sh. La compilation ne démarre pas. Corriger le nom seul laisserait le problème de -e : bash script ignore l’option du shebang.
+L27-36 : produit update.json depuis Mesa VERSION. versionCode est une chaîne obtenue en supprimant tout sauf les chiffres : pas un compteur de builds, pas de monotonicité garantie entre versions de développement et finales, même code pour plusieurs commits de même VERSION. Type attendu inconnu faute de client fourni. URL de ZIP cohérente avec le nom produit et le tag github_run. Changelog fixé à main, même en lancement manuel depuis une autre branche. Pas de validation des lectures ni du JSON généré ; les substitutions cat peuvent échouer sans rendre cat <<EOF fautif.
+L38-44 : collecte les logs uniquement si les étapes précédentes réussissent, car absence de condition always() ou équivalente. C’est précisément en cas d’échec qu’ils sont nécessaires. Le journal de redirection turnip_workdir/meson_log n’est pas inclus. ninja_log et journal interne Meson ciblés correctement si créés.
+L46-54 : publie deux fichiers sur un tag constant. Nom Weekly Action Release incohérent avec deux dates par mois. Pas de garde de concurrence : deux lancements peuvent se concurrencer sur la même release. Ne pas affirmer que cela se produit à chaque run. Tag réutilisé ne documente pas à lui seul le commit Mesa compilé. Aucun test sur appareil avant publication.
+Verdict : workflow bloqué par un nom de script inexistant ; les autres défauts restent importants une fois ce blocage levé.
+
+03 — README.md — 26 lignes — LU INTÉGRALEMENT
+Rôle : présentation, installation et compilation locale.
+L1 : annonce Magisk et Adreno Tools ; le script actuel ne produit que le ZIP Adreno Tools, aucun module Magisk (module.prop, installation, etc.). Documentation obsolète.
+L3-4 : horaire annoncé 06:00 UTC, réel 05:20 UTC dans le YAML.
+L6-10 : instructions Magisk et renvoi à une liste d’essais non rattachés au pilote actuel.
+L12-13 : consigne d’installation Adreno Tools très générale, aucun exemple de chargeur ni version requise.
+L15-17 : récupère le script depuis un dépôt externe ; peut différer de cette archive. Linux insuffisamment précisé (chaîne Linux x86_64). Dépendances, API Android 34, environnement Python et comportement de relance absents. Commande bash sans -e expose la faiblesse de gestion d’erreurs.
+L18 : lien vers un ancien commit, non vers cette version. Changer l’URL et renommer le dossier ne garantit pas la compatibilité des options Meson pour toutes les branches.
+L20-26 : références historiques/externe, pas tests du présent build. Leur existence n’atteste pas les promesses A660/Vulkan 1.4.
+Verdict : réécrire pour décrire les sorties et contraintes réelles.
+
+04 — changelog.md — 7 lignes — LU INTÉGRALEMENT
+Rôle : renvoie aux historiques des scripts et de Mesa.
+L1-4 : annonce l’absence de changelog détaillé ; renvoie au dépôt d’origine, pas au dépôt dynamique utilisé par le workflow.
+L6-7 : historique de Mesa main mouvant, sans identifier le commit contenu dans chaque ZIP.
+Verdict : ne permet pas d’auditer précisément les changements entre deux paquets publiés. Pas une panne de compilation.
+
+05 — list.md — 19 lignes — LU INTÉGRALEMENT
+Rôle : tableau historique de compatibilité des applications, référencé sous Magisk dans README.
+L1-2 : en-tête et séparateur Markdown corrects.
+L3 : Genshin, coche et affirmation de prise en charge Vulkan ; pas de version/application/appareil/date/driver qui rattache cet essai au paquet courant.
+L4 : Fortnite, même absence de protocole ou de version vérifiable pour cette archive.
+L5 : 3D Mark, coche sans mesure ni précision de test.
+L6 : GRID, auteur d’essai indiqué mais contexte matériel absent.
+L7 : SpongeBob, coche avec mauvaise performance : « marche » ne veut pas dire « performant ».
+L8 : Carx Street, attribution sans conditions d’essai.
+L9 : Dolphin, attribution et <br> final superflu mais pas défaut fonctionnel.
+L10 : PPSSPP, attribution sans configuration.
+L11 : EggNS, coche et mauvaise performance.
+L12-13 : ANGLE et ARK, coches sans précisions.
+L14 : Revelation M, échec et retour OpenGL ES ; les bibliothèques propriétaires mentionnées ne sont pas ce pilote.
+L15 : TauCeti, coche et mauvaise performance.
+L16 : COD Warzone, coche malgré problème de couleurs et chargements longs ; statut trop binaire.
+L17 : GTA Trilogy, fonctionnement avec mauvaises performances.
+L18 : Hitman, 60 fps/qualité moyenne sans appareil, scène ou méthode de mesure.
+L19 : généralisation à la majorité des jeux Unity/Unreal non étayée par le petit tableau.
+Verdict : témoignages historiques, pas validation A660 du ZIP courant, encore moins garantie universelle. Les affirmations de jeux n’ont pas été testées ni vérifiées individuellement en ligne.
+
+06 — LICENSE — 674 lignes — LU INTÉGRALEMENT
+Rôle : texte GNU GPL version 3 du 29 juin 2007 présent dans le dépôt. Ce fichier ne participe pas à la compilation.
+L1-7 : titre, version et notice de reproduction du texte.
+L8-70 : préambule décrivant objectifs et principes.
+L71-111 : titre des conditions et section 0, définitions.
+L112-153 : section 1, code source et source correspondante.
+L154-178 : section 2, permissions de base.
+L179-194 : section 3, mesures techniques et contournement.
+L195-207 : section 4, copies non modifiées.
+L208-244 : section 5, versions source modifiées et agrégats.
+L245-342 : section 6, diffusion de formes non source et informations d’installation.
+L343-406 : section 7, conditions additionnelles.
+L407-434 : section 8, cessation/rétablissement des droits.
+L435-445 : section 9, acceptation et simple possession de copies.
+L446-470 : section 10, droits des destinataires.
+L471-539 : section 11, brevets.
+L540-551 : section 12, conditions contradictoires.
+L552-562 : section 13, combinaison avec AGPL.
+L563-588 : section 14, versions de licence.
+L589-599 : section 15, absence de garantie.
+L600-611 : section 16, responsabilité.
+L612-622 : section 17 et fin des conditions.
+L623-674 : guide d’application avec exemples de notices et placeholders : ces placeholders appartiennent au texte d’exemple, pas à une erreur de script.
+Verdict technique : aucun défaut de build. Identification et description du document, sans audit juridique. Ne pas déduire la licence de chaque composant Mesa téléchargé de ce seul fichier.
+
+07 — patches/.gitkeep — 0 octet — INSPECTÉ
+Rôle : permet à Git de conserver le dossier patches vide.
+Aucune ligne, aucun patch. Aucun code du script ne parcourt ni applique ce dossier. Ajouter un patch ici ne produirait donc aucun effet avec ce script. Aucun réglage A660 externe fourni.
+Verdict : fichier vide intentionnel ; infrastructure d’application des patches absente.
+
+08 — .git/HEAD — 1 ligne — LU
+L1 : référence symbolique à refs/heads/main. Cohérente avec la référence présente.
+Verdict : aucun défaut détecté.
+
+09 — .git/config — 13 lignes — LU
+L1-7 : format de dépôt 0, non bare, reflogs activés, droits exécutables et liens symboliques non suivis fidèlement, noms de fichiers insensibles à la casse selon configuration locale. Paramètres de copie locale ; pas ceux automatiquement imposés aux futurs clones GitHub.
+L8-10 : origin pointe vers 67gh/freedreno_turnip-CI, fetch de toutes les branches.
+L11-13 : main suit origin/main.
+Découverte : README/changelog renvoient à ilhan-athn7 tandis que ce dépôt local pointe vers 67gh ; un lecteur peut récupérer une autre version que celle analysée.
+Verdict : cohérent pour le clone, documentation de provenance à clarifier.
+
+10 — .git/description — 1 ligne — LU
+Description générique « Unnamed repository ». Sans effet sur le build GitHub. Le hook update.sample refuserait cette description s’il était activé, mais il ne l’est pas.
+
+11 — .git/info/exclude — 6 lignes — LU
+L1-4 : commentaires expliquant les exclusions locales. L5-6 : motifs commentés, donc aucune exclusion active.
+Découverte : aucun .gitignore de projet fourni ; le dossier turnip_workdir créé à la racine n’est pas exclu par ces fichiers. Risque de polluer un futur git add, pas échec de compilation.
+
+12 — .git/logs/HEAD — 1 ligne — LU
+Enregistre le clonage, ancien identifiant nul et nouvel identifiant be36ce3e8942da5f72bfa7092d3a115a645f4a7b, auteur, horodatage/fuseau et origine. Aucun besoin de recopier les coordonnées de l’auteur dans le journal.
+Verdict : trace locale cohérente, pas code exécutable.
+
+13 — .git/logs/refs/heads/main — 1 ligne — LU
+Même événement de clone et même commit, pour la branche locale main. Cohérent avec HEAD.
+
+14 — .git/logs/refs/remotes/origin/HEAD — 1 ligne — LU
+Même événement pour HEAD distant. Cohérent avec origin/main.
+
+15 — .git/packed-refs — 2 lignes — LU
+L1 : en-tête du format de références empaquetées.
+L2 : origin/main pointe vers be36ce3e8942da5f72bfa7092d3a115a645f4a7b.
+Verdict : référence valide et cohérente avec main.
+
+16 — .git/refs/heads/main — 1 ligne — LU
+Commit be36ce3e8942da5f72bfa7092d3a115a645f4a7b. L’objet existe et git fsck ne relève pas de corruption.
+
+17 — .git/refs/remotes/origin/HEAD — 1 ligne — LU
+Référence symbolique à refs/remotes/origin/main ; cible présente dans packed-refs. L’absence de fichier loose origin/main n’est pas un défaut.
+
+NOTE COMMUNE AUX 14 HOOKS CI-DESSOUS
+Ce sont des exemples .sample, pas des hooks activés. Leurs shebangs désignent Termux (/data/data/com.termux/files/usr/bin/...), pas un interpréteur disponible sur Ubuntu standard. Cela ne bloque pas le workflow actuel. Ils nécessiteraient adaptation avant activation sur un autre hôte. Aucun de ces hooks n’a été activé ou exécuté pour cet audit. Les lignes de commentaires décrivent leur usage ; les plages ci-dessous couvrent la logique et les explications intégrales.
+
+18 — .git/hooks/applypatch-msg.sample — 15 lignes — LU
+L1-10 : interpréteur et notice. L12 : charge git-sh-setup. L13-14 : trouve et délègue au hook commit-msg s’il est exécutable, transmet les arguments. L15 : succès si aucune délégation.
+Verdict : exemple inactif, pas de défaut du pilote.
+
+19 — .git/hooks/commit-msg.sample — 74 lignes — LU
+L1-19 : notice et ajout Signed-off-by commenté. L21-27 : détection des signatures dupliquées. L29-43 : choix/échappement du marqueur de commentaire et du séparateur scissors. L44-66 : parcours sed du corps du message pour détecter diff/Index: susceptibles de perturber git am. L67-74 : diagnostic et code retour.
+Verdict : exemple inactif ; aucune implication dans la compilation.
+
+20 — .git/hooks/fsmonitor-watchman.sample — 168 lignes — LU
+L1-18 : Perl, modules et protocole du hook. L19-28 : lit version/jeton et exige protocole 2. L30-40 : répertoire courant et sélection JSON::XS ou JSON::PP. L42-49 : lance requête et renvoie les changements. L51-65 : émission jeton/chemins séparés par NUL. L67-73 : lecture horloge Watchman. L75-97 : ouvre Watchman et construit requête JSON excluant .git, éventuellement depuis le jeton. L99-118 : débogage commenté, communication et décodage de réponse. L121-155 : initialise surveillance si nécessaire, traite erreurs et signale premier balayage complet. L157-168 : chemin Windows ou Unix.
+Réserve conditionnelle : le chemin du dépôt est interpolé dans du JSON/shell ; chemins contenant guillemets ou caractères particuliers nécessitent prudence si l’exemple est activé. Aucune incidence actuelle ; pas de test Watchman exécuté.
+
+21 — .git/hooks/post-update.sample — 8 lignes — LU
+L1-6 : notice. L8 : git update-server-info pour transport HTTP statique. Inactif, sans effet sur GitHub Actions.
+
+22 — .git/hooks/pre-applypatch.sample — 14 lignes — LU
+L1-9 : notice. L11 : environnement Git. L12-13 : délégation à pre-commit si exécutable. L14 : succès sinon. Inactif.
+
+23 — .git/hooks/pre-commit.sample — 49 lignes — LU
+L1-8 : notice. L10-16 : HEAD ou arbre vide pour premier commit. L18-22 : option noms non ASCII et redirection stderr. L24-46 : refuse nouveaux noms non ASCII selon réglage. L48-49 : git diff-index --check sur index.
+Verdict : contrôle de noms/espaces, pas test Mesa ; inactif.
+
+24 — .git/hooks/pre-merge-commit.sample — 13 lignes — LU
+L1-8 : notice. L10-12 : charge environnement et appelle pre-commit actif. L13 : succès sinon. Inactif.
+
+25 — .git/hooks/pre-push.sample — 53 lignes — LU
+L1-20 : contrat d’entrée. L22-25 : remote, URL et identifiant nul. L27-41 : lit références, ignore suppressions et choisit plage de commits. L43-50 : refuse les messages commençant par WIP. L51-53 : fin/succès.
+Verdict : règle de travail illustrative, pas test de compilation ; inactif.
+
+26 — .git/hooks/pre-rebase.sample — 169 lignes — LU
+L1-16 : notice. L18-34 : branche de publication next, lecture arguments et filtrage des branches de travail. L36-51 : existence de branche et détection déjà intégrée à master. L53-65 : comparaison avec next/master. L66-89 : Perl affiche les commits déjà publiés et refuse rebase. L91-169 : documentation intégrale et exemple de graphe, pas une seconde procédure de rebase.
+Réserves si activation : master/next codés en dur alors que ce dépôt est sur main ; /usr/bin/perl L68 diffère du préfixe Termux. basebranch L19 n’est pas exploité. Aucun effet tant que .sample.
+
+27 — .git/hooks/pre-receive.sample — 24 lignes — LU
+L1-7 : notice. L9-14 : parcourt les variables numérotées des push options. L15-23 : affiche echoback ou refuse reject, incrémente compteur. L24 : fin.
+Verdict : exemple inactif, aucune validation du binaire.
+
+28 — .git/hooks/prepare-commit-msg.sample — 42 lignes — LU
+L1-21 : notice des trois exemples. L23-25 : paramètres. L27 : Perl enlève les lignes d’aide et écrit une sauvegarde .bak. L29-42 : insertion du diff et signature, commentées.
+Réserve si activation sous Termux : /usr/bin/perl codé en dur. Sans impact actuel.
+
+29 — .git/hooks/push-to-checkout.sample — 78 lignes — LU
+L1-20 : contexte receive.denyCurrentBranch=updateInstead. L21 : commit cible. L23-28 : fonction d’échec. L30-48 : explications. L50-58 : rafraîchit index et refuse modifications non indexées. L60-68 : HEAD ou arbre vide. L70-73 : refuse modifications indexées. L75-78 : met à jour arbre de travail via read-tree.
+Verdict : exemple qui modifierait le dépôt s’il était activé ; non exécuté et sans effet sur le pipeline courant.
+
+30 — .git/hooks/sendemail-validate.sample — 77 lignes — LU
+L1-23 : notice. L25-29 : validation lettre de présentation vide (TODO). L31-38 : applique patch avec git am -3 puis contrôles additionnels TODO. L40-44 : série, contrôle TODO. L46-60 : crée/récupère un worktree temporaire et stocke son chemin. L62-70 : change de contexte et choisit validation patch/lettre. L72-77 : nettoie sur le dernier élément et valide la série.
+Découverte conditionnelle : si une validation échoue avant d’atteindre L72-77, le trap de suppression n’est pas encore installé ; worktree/config peuvent rester malgré le commentaire annonçant nettoyage en cas d’échec. TODO signifient aucun contrôle métier additionnel. Aucun message envoyé, aucun hook exécuté.
+
+31 — .git/hooks/update.sample — 128 lignes — LU
+L1-24 : notice et options. L27-43 : arguments et garde de contexte. L45-50 : lit options booléennes. L52-59 : exige description personnalisée, incompatible avec description générique actuellement présente s’il est activé. L61-68 : identifie suppression/type d’objet. L70-125 : règles pour création/modification/suppression tags et branches, refus autres types. L127-128 : succès.
+Verdict : exemple inactif ; ne pas attribuer aux releases GitHub ses refus potentiels.
+
+32 — .git/index — 723 octets — CONTRÔLÉ COMME BINAIRE
+Rôle : index des fichiers suivis. En-tête DIRC, version 2, 7 entrées. SHA-1 final vérifié. git ls-files --stage confirme workflow, LICENSE, README, changelog, list, .gitkeep et turnip_builder.sh ; tous mode 100644. Aucun turnip_a660_final.sh.
+Découverte : le script n’est pas suivi comme exécutable ; une invocation directe après clone demanderait chmod, tandis que l’invocation bash documentée ignore le -e du shebang. git status propre : les défauts relevés sont dans la version enregistrée, pas des modifications locales non indexées.
+
+33 — .git/objects/pack/pack-29eb8e8808bbf989b407fb3d083bad77e2ec5459.idx — 11 992 octets — CONTRÔLÉ COMME BINAIRE
+Rôle : index des objets du pack. git verify-pack -v termine avec code 0, pack déclaré ok. Pas de lignes de code source à commenter dans un index binaire.
+
+34 — .git/objects/pack/pack-29eb8e8808bbf989b407fb3d083bad77e2ec5459.pack — 130 570 octets — CONTRÔLÉ COMME BINAIRE
+Rôle : objets Git compressés (historique, arbres et contenus). git fsck --full et verify-pack réussissent. Ce contrôle d’intégrité ne constitue PAS une revue ligne par ligne des anciennes versions de l’historique ; la revue porte sur les fichiers actuels extraits du ZIP. Aucun code source Mesa courant n’est livré dans l’arbre actuel.
+
+35 — .git/objects/pack/pack-29eb8e8808bbf989b407fb3d083bad77e2ec5459.rev — 1 612 octets — CONTRÔLÉ COMME BINAIRE
+Rôle : index inverse des positions d’objets du pack. En-tête RIDX, version 1, identifiant hash 1 ; 390 entrées. Empreinte SHA-1 du fichier correcte et empreinte du pack associée égale à celle du pack. Contrôle permutation/ordre complété plus bas.
+
+VÉRIFICATIONS ET COMPLÉMENTS — À LIRE AVEC LES SECTIONS CI-DESSUS
+
+A. Résultats effectivement obtenus
+- ZIP : 55 entrées = 35 fichiers et 20 entrées de répertoire. zipfile.testzip() ne signale aucun CRC défectueux.
+- Lecture : 30 fichiers texte totalisant 1 873 lignes, un fichier vide et quatre fichiers binaires Git contrôlés structurellement. Les fichiers texte ont été lus intégralement ; l’explication regroupe les lignes contiguës par fonction.
+- bash -n turnip_builder.sh : code 0. Syntaxe Bash valide, ce qui ne prouve ni succès de compilation ni bonne gestion des erreurs.
+- Test isolé du shebang : un fichier « #!/bin/bash -e ; false ; echo ... » exécuté par bash fichier continue et retourne 0 ; exécuté directement avec droits adéquats, s’arrête et retourne 1. Défaut de l’invocation documentée confirmé.
+- Test isolé de la fonction port_lib_for_adrenotools réellement extraite du script : fichier source de copie absent, anciennes sorties factices présentes, patchelf et zip remplacés par des fonctions retournant 1. Résultat : cp signale l’absence de source, pourtant « All done » est affiché et code final 0. Il s’agit d’une reproduction du flux d’erreur, PAS d’une compilation ni d’un vrai paquet pilote.
+- git fsck --full : code 0, aucune anomalie signalée.
+- git verify-pack -v : code 0, pack ok, 390 objets ; les anciens contenus ne sont pas audités sémantiquement.
+- .git/index : signature DIRC v2, 7 entrées, empreinte correcte.
+- .rev : signature RIDX v1/hash SHA-1, empreintes correctes, permutation exacte de 390 indices et ordre correspondant aux offsets du .idx vérifiés.
+- git status : propre ; tous les fichiers extraits sont restés identiques octet pour octet à l’archive source.
+- Outils Meson, Ninja, ShellCheck, ccache, pkg-config non disponibles dans cet environnement de contrôle. Aucun test Meson/Ninja ou audit ShellCheck n’a été prétendu.
+
+B. Confirmation documentaire et nuances
+1. Meson place la sélection des compilateurs/outils sous [binaries]. Le défaut de native.txt L90-96 est confirmé par la référence officielle. Sans fichier natif correct, la découverte via PATH peut faire fonctionner certains environnements et échouer dans d’autres ; ce n’est pas une preuve que Meson échoue forcément sur tous les hôtes.
+Source consultée le 09/10/2026 : https://mesonbuild.com/Machine-files.html
+2. DÉCOUVERTE SUPPLÉMENTAIRE : strip=true signifie suppression des symboles à l’installation. Le script ne lance que ninja, puis copie directement la bibliothèque de l’arbre de build. Il ne lance ni meson install ni llvm-strip explicitement ; l’option L118 ne garantit donc pas que le .so empaqueté est dépouillé de ses symboles. Ne pas confondre buildtype=release, absence d’informations de debug et suppression de la table des symboles. L’outil erroné L79 est un défaut latent de configuration ; ne pas l’annoncer comme échec certain de Ninja dans le flux présent.
+Source : https://mesonbuild.com/Builtin-options.html
+3. La documentation NDK indique llvm-strip. Le nom aarch64-linux-android-strip du cross-file est à remplacer par le nom documenté, puis valider le binaire final ; pas d’inspection du ZIP NDK r29 effectuée ici.
+Source : https://developer.android.com/ndk/guides/other_build_systems
+4. NUANCE pour L6 : la liste officielle actuelle du paquet glslang-tools Ubuntu noble amd64 contient BIEN /usr/bin/glslang ET /usr/bin/glslangValidator. Leur double exigence n’est donc PAS, à elle seule, un bug prouvé sur Ubuntu 24.04 à la date du contrôle. La présence effective du paquet dans le runner reste à vérifier ; d’autres versions/distributions peuvent différer.
+Source : https://packages.ubuntu.com/noble/amd64/glslang-tools/filelist
+5. NUANCE ccache : les lignes 75-76 le nomment explicitement et le contrôle des dépendances ne le mentionne pas. L’effet de son absence dépend du traitement du wrapper par la version Meson ; ne pas présenter cela comme un blocage certain sans exécution. Le risque de prérequis incomplets concerne surtout l’ensemble des outils et les dépendances du Mesa main effectivement téléchargé.
+6. minApi=34 déclare le niveau minimal Android 14 dans les métadonnées. Un support Android plus ancien nécessiterait une nouvelle cible et vérification des API employées ; changer seulement meta.json ne suffit pas.
+7. Il manque la source Mesa téléchargée, le NDK et les actions tierces dans cette archive. L’audit ne peut donc pas donner un verdict ligne par ligne sur leurs sources externes, ni garantir Vulkan 1.4, performances A660, compatibilité KGSL/device, schéma du chargeur ou absence de dépendances ELF manquantes.
+
+C. Priorités pour une correction ultérieure
+P0 — Corriger le chemin de script dans le workflow ; actuellement aucun build n’est lancé.
+P1 — Rendre les échecs fatals et explicites dans le script ; éviter faux succès et réemploi silencieux d’anciennes sorties. Conserver les logs même en échec.
+P1 — Corriger le fichier natif Meson ; rendre l’environnement de compilation explicite et vérifier les dépendances de la révision Mesa choisie. Isoler les dépendances Python.
+P1 — Figer une révision Mesa et enregistrer sa provenance ; vérifier HTTP/archives avant extraction ; prévoir des répertoires propres pour relances.
+P2 — Valider le paquet final (ELF AArch64, SONAME, dépendances, alignement, JSON, intégrité ZIP) ; stripping effectif si souhaité ; essais sur appareil et chargeur réels.
+P2 — Versionner les builds de façon discriminante, vérifier le contrat update.json et empêcher les publications concurrentes incohérentes.
+P2 — Corriger les annonces Magisk, horaire, « Weekly », « full LTO » et les promesses A660/MAX PERF/Vulkan 1.4 non démontrées. Documenter Android minimal et hôte supporté.
+P3 — Clarifier README/changelog/provenance, contextualiser les essais de jeux, ajouter exclusions Git des produits de build si le développement se poursuit.
+
+D. Conclusion de couverture
+Analyse de tous les 35 fichiers physiques présents terminée pour ce périmètre. Les binaires Git n’ont pas de « lignes » de source : leur structure et leur intégrité ont été contrôlées. Les 20 répertoires n’ajoutent pas de contenu textuel. Aucun source modifié ; aucune release publiée. Le journal conserve les observations, preuves, incertitudes et priorités pour poursuivre sans perdre le contexte.
+
+E. Empreintes pour identifier exactement la version analysée
+Archive SHA-256 : 2d7e6a0a7c5fa8083c7e40cf630f2bbfb5fd153f89cea6852305e16229b83a7a
+.git/HEAD | 21 octets | SHA-256 28d25bf82af4c0e2b72f50959b2beb859e3e60b9630a5e8c603dad4ddb2b6e80
+.git/config | 302 octets | SHA-256 53d463c03ad025649566d54686c1331396644d349d7c2e30ce8e691a2da8d2c4
+.git/description | 73 octets | SHA-256 85ab6c163d43a17ea9cf7788308bca1466f1b0a8d1cc92e26e9bf63da4062aee
+.git/hooks/applypatch-msg.sample | 509 octets | SHA-256 94f95b4ce4df0e89b8e267ec1634d9187c71802b78029833fdce4045aa6f08a5
+.git/hooks/commit-msg.sample | 2003 octets | SHA-256 b15d4a0a2e3362aafd28ff178cb5b7ec7a6e64ac29c50209b99458819b6d0cba
+.git/hooks/fsmonitor-watchman.sample | 4638 octets | SHA-256 a290aca891c7e3729750c56f8d049e554894bc96d240072230e61c756ea3f7e4
+.git/hooks/post-update.sample | 220 octets | SHA-256 f8a8e865862e210edfc56488db28ac0386f6f8f9ad08260d15ce26ffa9de89a5
+.git/hooks/pre-applypatch.sample | 455 octets | SHA-256 e57b877b3902f9d1aede7779c0f84a410fd93cf0e04bddb351503829ddf08840
+.git/hooks/pre-commit.sample | 1680 octets | SHA-256 964431168c0016a3c95a162b33521d34d980926b0e482184dfc599af49b5bfd6
+.git/hooks/pre-merge-commit.sample | 447 octets | SHA-256 5efbacab709d11ca887672440664e782d4e11f021879f415b68dfeadeae4624e
+.git/hooks/pre-push.sample | 1405 octets | SHA-256 74b00ff982a9de10b548a36682161f01eb40ad8263bbb4cebf5bfcf03ec756ea
+.git/hooks/pre-rebase.sample | 4929 octets | SHA-256 d844aee21f5842e1e5aac995fac84c1067a878408d8224fe63ae311f7fa41414
+.git/hooks/pre-receive.sample | 575 octets | SHA-256 bf8f6d6f740288cd6553dc2a236e97ee914cacf63c874982756c4cdb23f93bc4
+.git/hooks/prepare-commit-msg.sample | 1523 octets | SHA-256 1c4e9ad602b0b5175ea931ce7aaf85b420d388bef94048f1e303820a1ac3a7e4
+.git/hooks/push-to-checkout.sample | 2814 octets | SHA-256 8ff7cb671a9324bd72006d7b1517cc01b798610a59cdaa93ccdc436238f6e881
+.git/hooks/sendemail-validate.sample | 2339 octets | SHA-256 fd1f34006ffad4ab58df6386e8245cdcadb8f5cc3056256a61033246e89320c3
+.git/hooks/update.sample | 3681 octets | SHA-256 af1135f0b538e9f877b21b852f61b17f2cf3661df42b8831bd3b598fdc5f2127
+.git/index | 723 octets | SHA-256 22d40b94d02bed031e83e45f721c84a1cd4c88f85d25d572a54830580ccc70e5
+.git/info/exclude | 240 octets | SHA-256 6671fe83b7a07c8932ee89164d1f2793b2318058eb8b98dc5c06ee0a5a3b0ec1
+.git/logs/HEAD | 183 octets | SHA-256 38e15982d6a6f9de3747d8bbf8c80e7eae284b6de07d983667d4f24e64b287e2
+.git/logs/refs/heads/main | 183 octets | SHA-256 38e15982d6a6f9de3747d8bbf8c80e7eae284b6de07d983667d4f24e64b287e2
+.git/logs/refs/remotes/origin/HEAD | 183 octets | SHA-256 38e15982d6a6f9de3747d8bbf8c80e7eae284b6de07d983667d4f24e64b287e2
+.git/objects/pack/pack-29eb8e8808bbf989b407fb3d083bad77e2ec5459.idx | 11992 octets | SHA-256 0dfdec33740a8d68df903d20983f861aecb9ecd93623886e530fe2df5bc05900
+.git/objects/pack/pack-29eb8e8808bbf989b407fb3d083bad77e2ec5459.pack | 130570 octets | SHA-256 c424b452fa388dcdf330c766be8b21cb86ba8d698fad1eb27944760e85b01b22
+.git/objects/pack/pack-29eb8e8808bbf989b407fb3d083bad77e2ec5459.rev | 1612 octets | SHA-256 3afcd67a1dc60584c74345da2161d0db781086d5686b73a8ef28a59038ad13b5
+.git/packed-refs | 112 octets | SHA-256 830d2da4855d6b3b61cfb69fa861a2d96c377a4b4fd12a12e023db94a8a86b0b
+.git/refs/heads/main | 41 octets | SHA-256 352096a2d56e9f50035f74bd2cba5b14e553fc01407c92132ff17e3054d70608
+.git/refs/remotes/origin/HEAD | 30 octets | SHA-256 2bb6a24aa0fc6c484100f5d51a29bbad841cd2c755f5d93faa204e5dbb4eb2b4
+.github/workflows/turnip_builder.yml | 1656 octets | SHA-256 57ec8322675833660251a9bf8e9391e8688efa81ffa885a0b3a933dbd630c1cc
+LICENSE | 35149 octets | SHA-256 3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986
+README.md | 1184 octets | SHA-256 1b5f3876321d9a4ef3ddb370da0dfe14102a013908171561a4294d85a22e919e
+changelog.md | 258 octets | SHA-256 3dd742f167f8c18d985e93d08708b70ad4a18c411d463cda6dd875956bee7744
+list.md | 3426 octets | SHA-256 0bda71f4c60579c9157f2905f6816112f7839cc74550130bb33cd5655c27e82a
+patches/.gitkeep | 0 octets | SHA-256 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+turnip_builder.sh | 5545 octets | SHA-256 d307a7a0a36cf9d36e63d1a13a60a89fb1adf5cc4b5087ca62e68af82ab773b5

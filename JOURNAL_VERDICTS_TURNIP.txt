@@ -1,0 +1,142 @@
+JOURNAL DES CORRECTIONS — TURNIP — 10 octobre 2026
+Règle utilisateur : lire l’analyse du fichier AVANT chaque modification ; relire trois fois APRÈS ; consigner le verdict. Cette règle vaut pour chaque nouvelle modification.
+Reprise : les fichiers temporaires du 9 octobre ont disparu. Le journal d’analyse sauvegardé a été relu intégralement ; les corrections sont reconstruites et de nouveau relues. Les essais de compilation du 9 octobre ne sont pas comptés comme réussis.
+Analyse préalable des fichiers existants : sections 01 (script), 02 (workflow), 03 (README), 04 (changelog), 05 (liste), 07 (patches) et 11 (exclusions) relues le 10 octobre.
+Analyse préalable des ajouts : package_driver.py remplace l’empaquetage non contrôlé ; extract_archive.py conserve permissions/liens du NDK et contrôle les archives ; tests/test_pipeline.py couvre les cas d’erreur ; .gitignore exclut les sorties ; AGENTS.md conserve la règle utilisateur. Ces fichiers n’existaient pas dans le ZIP.
+Les exemples Git .sample restent inactifs et ne sont pas des composants du build. L’historique, la licence et les références Git seront conservés sans réécriture.
+
+turnip_builder.sh — cycle reconstruit 1
+Analyse avant modification : Section 01 et compléments relus. Reconstruction avec arrêt strict, dossiers uniques, sources figées, outils séparés.
+Relecture 1 : Flux téléchargement/configuration/build/empaquetage revu ; plus de shebang -e trompeur.
+Relecture 2 : Pipelines avec pipefail, chemins cités, CLI stricte, prérequis initialisés.
+Relecture 3 : Comparaison options/provenance et appel des helpers ; bash -n OK, tests Meson/Ninja simulés OK.
+SHA-256 : 3a04e9cfdce264581797e68c2cbb58ef13fbf9a954024c371114b568efe7e9d8
+Verdict : trois relectures complètes effectuées ; vérifications locales satisfaisantes. Compilation réelle en cours, matériel non testé.
+
+scripts/extract_archive.py — cycle reconstruit 1
+Analyse avant modification : Nouveau : corriger permissions et liens lors de l’extraction, contrôle CRC et chemins.
+Relecture 1 : Deux passes fichiers puis liens, permissions exécutables conservées.
+Relecture 2 : Refus des chemins sortants et écrasements ; erreurs propagées.
+Relecture 3 : Contrat du script et test de lien/permission/traversal vérifiés.
+SHA-256 : 5a1e77871b96740308a90fbe2b05d50d5d65a6cef351a9f8fc17c6c77cbf9323
+Verdict : trois relectures complètes effectuées ; vérifications locales satisfaisantes. Compilation réelle en cours, matériel non testé.
+
+scripts/package_driver.py — cycle reconstruit 1
+Analyse avant modification : Nouveau : remplace les tests d’existence qui pouvaient annoncer un faux succès.
+Relecture 1 : ELF64 ET_DYN/AArch64, SONAME et dépendances dynamiques examinés.
+Relecture 2 : Bornes, segments, alignement, doublons, refus sortie existante.
+Relecture 3 : Métadonnées ADPKG, version réelle, ZIP revérifié, publication atomique sans écrasement ; tests ELF/ZIP OK.
+SHA-256 : 453c3e4a110bfa27ae445f7d3bd21ef43bc1e7c7c03dca69bb85cb56c4dc60bf
+Verdict : trois relectures complètes effectuées ; vérifications locales satisfaisantes. Compilation réelle en cours, matériel non testé.
+
+.github/workflows/turnip_builder.yml — cycle reconstruit 1
+Analyse préalable : Section 02 relue avant écriture.
+Relecture 1 : Bon script et prérequis explicites.
+Relecture 2 : always() pour logs, sortie exacte du run, refus fichiers absents.
+Relecture 3 : Cron, publications sérialisées, tag propre au build et manifeste cohérents.
+SHA-256 : b4a73ae0e352ee9b41db372f0b8914e9345be0cb51c829c5e35c142ba49d92c7
+Verdict : trois relectures complètes terminées, cohérence vérifiée ; publication/appareil non testés.
+
+README.md — cycle reconstruit 1
+Analyse préalable : Section 03 relue avant écriture.
+Relecture 1 : Produit Adreno Tools décrit sans promesse Magisk/A660.
+Relecture 2 : Prérequis/API, erreurs, logs, espaces de chargement et limites explicités.
+Relecture 3 : Commandes, noms, cron et versionnement confrontés aux sources.
+SHA-256 : 17831a470a83586995504a8d95ddca45bdbc99491e83fc5c49706f39becf9bc8
+Verdict : trois relectures complètes terminées, cohérence vérifiée ; publication/appareil non testés.
+
+changelog.md — cycle reconstruit 1
+Analyse préalable : Section 04 relue avant écriture.
+Relecture 1 : Changements réels recensés.
+Relecture 2 : Pas de changements Mesa ni de tests matériels inventés.
+Relecture 3 : Commit et provenance alignés au builder.
+SHA-256 : 0557eafc9e34bc723c5d4eb728ce33e22df3d8d1c264967395c971d8e9a25011
+Verdict : trois relectures complètes terminées, cohérence vérifiée ; publication/appareil non testés.
+
+list.md — cycle reconstruit 1
+Analyse préalable : Section 05 relue avant écriture.
+Relecture 1 : 16 observations historiques conservées.
+Relecture 2 : Mauvaises performances/rendu dégradé distingués des succès.
+Relecture 3 : Aucune validation du build actuel déduite ; protocole futur indiqué.
+SHA-256 : 5107aa287f7d35326a03e61f2d016a1c93bfe14dedc6910d9515b184a5209859
+Verdict : trois relectures complètes terminées, cohérence vérifiée ; publication/appareil non testés.
+
+.gitignore — cycle reconstruit 1
+Analyse préalable : Section 11, nouvel ajout relue avant écriture.
+Relecture 1 : Répertoire de travail exclu.
+Relecture 2 : Caches Python exclus.
+Relecture 3 : Aucun fichier source ni journal exclu.
+SHA-256 : 107a10d504b97ff9a413f6c57e54317ad84a42657b8f00446dc71df837b4337f
+Verdict : trois relectures complètes terminées, cohérence vérifiée ; publication/appareil non testés.
+
+AGENTS.md — cycle reconstruit 1
+Analyse préalable : Nouvel ajout, règle utilisateur relue avant écriture.
+Relecture 1 : Analyse avant édition et trois relectures explicites.
+Relecture 2 : Nouveau cycle à chaque modification, limites des tests.
+Relecture 3 : Journaux locaux désignés et conservation des points de contrôle.
+SHA-256 : b3a3fe435cf8513f02853c1bdaba57ea3ab69f13ae8003d163dce21a3dc3be3e
+Verdict : trois relectures complètes terminées, cohérence vérifiée ; publication/appareil non testés.
+
+tests/test_pipeline.py — cycle reconstruit 1
+Analyse préalable : Nouvel ajout, analyse des anciens faux succès relue avant écriture.
+Relecture 1 : Fixtures ELF et erreurs isolées, pas de réseau.
+Relecture 2 : Cas de copie, Meson et Ninja testés séparément.
+Relecture 3 : Un défaut du test checksum est découvert : le mock curl utilise son propre $2. Corriger ce test avant verdict final.
+SHA-256 : 866d6c101516295462397f5150760554f90665b269525eca7a7637a688ec5fae
+Verdict : test checksum à corriger, les 11 autres tests ne sont pas remis en cause.
+
+tests/test_pipeline.py — cycle 2
+Analyse du cycle 1 relue avant édition. Correction : mock curl écrit dans le dernier argument, puis assertions sur le fichier .part et absence de sortie finale.
+Relecture 1 : la panne vérifiée vient maintenant du checksum, pas du mock.
+Relecture 2 : les 12 scénarios et leurs assertions relus, isolation des temporaires.
+Relecture 3 : cohérence avec le vrai script sourçable et les helpers, pas de téléchargement en tests.
+SHA-256 : 5630a22db327b1d46f7bf92d49da3c62df17a2566eebff70203c604637007725
+Verdict : 12 tests réussis après correction, trois relectures complètes.
+
+POINT DE CONTRÔLE
+YAML parsé ; tous les scripts shell embarqués passent bash -n ; génération réelle du manifeste exécutée avec données de test, JSON et URL vers le tag du build corrects.
+Archives Mesa et NDK retéléchargées et SHA-256 vérifiés. Extraction réelle réussie ; compilation configurée par Meson, Ninja lancé (687 étapes). Résultat final pas encore observé au moment de ce point de contrôle.
+
+FICHIERS ORIGINAUX CONSERVÉS — contrôle intégral par empreinte
+.git/HEAD : inchangé, identique à l’original. Métadonnée ou historique Git conservé ; aucune action de compilation. SHA-256 28d25bf82af4c0e2b72f50959b2beb859e3e60b9630a5e8c603dad4ddb2b6e80
+.git/config : inchangé, identique à l’original. Métadonnée ou historique Git conservé ; aucune action de compilation. SHA-256 53d463c03ad025649566d54686c1331396644d349d7c2e30ce8e691a2da8d2c4
+.git/description : inchangé, identique à l’original. Métadonnée ou historique Git conservé ; aucune action de compilation. SHA-256 85ab6c163d43a17ea9cf7788308bca1466f1b0a8d1cc92e26e9bf63da4062aee
+.git/hooks/applypatch-msg.sample : inchangé, identique à l’original. Exemple Git .sample inactif ; aucun hook activé, problèmes conditionnels consignés dans l’analyse historique. SHA-256 94f95b4ce4df0e89b8e267ec1634d9187c71802b78029833fdce4045aa6f08a5
+.git/hooks/commit-msg.sample : inchangé, identique à l’original. Exemple Git .sample inactif ; aucun hook activé, problèmes conditionnels consignés dans l’analyse historique. SHA-256 b15d4a0a2e3362aafd28ff178cb5b7ec7a6e64ac29c50209b99458819b6d0cba
+.git/hooks/fsmonitor-watchman.sample : inchangé, identique à l’original. Exemple Git .sample inactif ; aucun hook activé, problèmes conditionnels consignés dans l’analyse historique. SHA-256 a290aca891c7e3729750c56f8d049e554894bc96d240072230e61c756ea3f7e4
+.git/hooks/post-update.sample : inchangé, identique à l’original. Exemple Git .sample inactif ; aucun hook activé, problèmes conditionnels consignés dans l’analyse historique. SHA-256 f8a8e865862e210edfc56488db28ac0386f6f8f9ad08260d15ce26ffa9de89a5
+.git/hooks/pre-applypatch.sample : inchangé, identique à l’original. Exemple Git .sample inactif ; aucun hook activé, problèmes conditionnels consignés dans l’analyse historique. SHA-256 e57b877b3902f9d1aede7779c0f84a410fd93cf0e04bddb351503829ddf08840
+.git/hooks/pre-commit.sample : inchangé, identique à l’original. Exemple Git .sample inactif ; aucun hook activé, problèmes conditionnels consignés dans l’analyse historique. SHA-256 964431168c0016a3c95a162b33521d34d980926b0e482184dfc599af49b5bfd6
+.git/hooks/pre-merge-commit.sample : inchangé, identique à l’original. Exemple Git .sample inactif ; aucun hook activé, problèmes conditionnels consignés dans l’analyse historique. SHA-256 5efbacab709d11ca887672440664e782d4e11f021879f415b68dfeadeae4624e
+.git/hooks/pre-push.sample : inchangé, identique à l’original. Exemple Git .sample inactif ; aucun hook activé, problèmes conditionnels consignés dans l’analyse historique. SHA-256 74b00ff982a9de10b548a36682161f01eb40ad8263bbb4cebf5bfcf03ec756ea
+.git/hooks/pre-rebase.sample : inchangé, identique à l’original. Exemple Git .sample inactif ; aucun hook activé, problèmes conditionnels consignés dans l’analyse historique. SHA-256 d844aee21f5842e1e5aac995fac84c1067a878408d8224fe63ae311f7fa41414
+.git/hooks/pre-receive.sample : inchangé, identique à l’original. Exemple Git .sample inactif ; aucun hook activé, problèmes conditionnels consignés dans l’analyse historique. SHA-256 bf8f6d6f740288cd6553dc2a236e97ee914cacf63c874982756c4cdb23f93bc4
+.git/hooks/prepare-commit-msg.sample : inchangé, identique à l’original. Exemple Git .sample inactif ; aucun hook activé, problèmes conditionnels consignés dans l’analyse historique. SHA-256 1c4e9ad602b0b5175ea931ce7aaf85b420d388bef94048f1e303820a1ac3a7e4
+.git/hooks/push-to-checkout.sample : inchangé, identique à l’original. Exemple Git .sample inactif ; aucun hook activé, problèmes conditionnels consignés dans l’analyse historique. SHA-256 8ff7cb671a9324bd72006d7b1517cc01b798610a59cdaa93ccdc436238f6e881
+.git/hooks/sendemail-validate.sample : inchangé, identique à l’original. Exemple Git .sample inactif ; aucun hook activé, problèmes conditionnels consignés dans l’analyse historique. SHA-256 fd1f34006ffad4ab58df6386e8245cdcadb8f5cc3056256a61033246e89320c3
+.git/hooks/update.sample : inchangé, identique à l’original. Exemple Git .sample inactif ; aucun hook activé, problèmes conditionnels consignés dans l’analyse historique. SHA-256 af1135f0b538e9f877b21b852f61b17f2cf3661df42b8831bd3b598fdc5f2127
+.git/index : inchangé, identique à l’original. Métadonnée ou historique Git conservé ; aucune action de compilation. SHA-256 22d40b94d02bed031e83e45f721c84a1cd4c88f85d25d572a54830580ccc70e5
+.git/info/exclude : inchangé, identique à l’original. Métadonnée ou historique Git conservé ; aucune action de compilation. SHA-256 6671fe83b7a07c8932ee89164d1f2793b2318058eb8b98dc5c06ee0a5a3b0ec1
+.git/logs/HEAD : inchangé, identique à l’original. Métadonnée ou historique Git conservé ; aucune action de compilation. SHA-256 38e15982d6a6f9de3747d8bbf8c80e7eae284b6de07d983667d4f24e64b287e2
+.git/logs/refs/heads/main : inchangé, identique à l’original. Métadonnée ou historique Git conservé ; aucune action de compilation. SHA-256 38e15982d6a6f9de3747d8bbf8c80e7eae284b6de07d983667d4f24e64b287e2
+.git/logs/refs/remotes/origin/HEAD : inchangé, identique à l’original. Métadonnée ou historique Git conservé ; aucune action de compilation. SHA-256 38e15982d6a6f9de3747d8bbf8c80e7eae284b6de07d983667d4f24e64b287e2
+.git/objects/pack/pack-29eb8e8808bbf989b407fb3d083bad77e2ec5459.idx : inchangé, identique à l’original. Métadonnée ou historique Git conservé ; aucune action de compilation. SHA-256 0dfdec33740a8d68df903d20983f861aecb9ecd93623886e530fe2df5bc05900
+.git/objects/pack/pack-29eb8e8808bbf989b407fb3d083bad77e2ec5459.pack : inchangé, identique à l’original. Métadonnée ou historique Git conservé ; aucune action de compilation. SHA-256 c424b452fa388dcdf330c766be8b21cb86ba8d698fad1eb27944760e85b01b22
+.git/objects/pack/pack-29eb8e8808bbf989b407fb3d083bad77e2ec5459.rev : inchangé, identique à l’original. Métadonnée ou historique Git conservé ; aucune action de compilation. SHA-256 3afcd67a1dc60584c74345da2161d0db781086d5686b73a8ef28a59038ad13b5
+.git/packed-refs : inchangé, identique à l’original. Métadonnée ou historique Git conservé ; aucune action de compilation. SHA-256 830d2da4855d6b3b61cfb69fa861a2d96c377a4b4fd12a12e023db94a8a86b0b
+.git/refs/heads/main : inchangé, identique à l’original. Métadonnée ou historique Git conservé ; aucune action de compilation. SHA-256 352096a2d56e9f50035f74bd2cba5b14e553fc01407c92132ff17e3054d70608
+.git/refs/remotes/origin/HEAD : inchangé, identique à l’original. Métadonnée ou historique Git conservé ; aucune action de compilation. SHA-256 2bb6a24aa0fc6c484100f5d51a29bbad841cd2c755f5d93faa204e5dbb4eb2b4
+LICENSE : inchangé, identique à l’original. Licence conservée intégralement ; aucune correction juridique à inventer. SHA-256 3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986
+patches/.gitkeep : inchangé, identique à l’original. Dossier vide volontaire ; le builder refuse maintenant les correctifs présents mais non intégrés. SHA-256 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+
+VERDICT FINAL — 10 octobre 2026
+Couverture : 35 fichiers originaux, dont 5 corrigés et 30 conservés à l’identique ; 5 nouveaux fichiers de code/configuration/procédure et les deux journaux. Chaque fichier modifié a son analyse préalable et trois relectures consignées ci-dessus.
+Tests : 12/12 réussis ; bash -n et contrôle YAML/manifeste réussis ; git fsck --full réussi.
+Compilation réelle : sources NDK/Mesa vérifiées, Meson configuré puis Ninja terminé avec code 0. Une interruption du processus local a nécessité une reprise dans le même dossier ; m4 manquait aux outils Ubuntu extraits localement et a été ajouté. Le workflow installe Flex/Bison par apt avec leurs dépendances. Aucun changement de source requis pour cette reprise.
+Emballage réel : strip, SONAME, validation ELF AArch64/ET_DYN, alignement LOAD 16 Kio, dépendances, CRC et contenu ZIP réussis. Archive relue indépendamment après génération et checksum revérifié.
+Mesa : 26.3.0-devel ; commit 9cb4a4fb42a8a067cd2250e116c6a605b527a093 ; Android API 34 ; LTO désactivé.
+SHA-256 bibliothèque : 288fb70ae04cd3b75108aa081968b250ec9199e69da2ce21b78dbe7a1a8e4ed6
+SHA-256 ZIP pilote : d106c6e9e942d5661639a5aaa6d5616de4e82d3ec90d7aa12acb1cd65e59cc7a
+Dépendances dynamiques observées : libc.so, libdl.so, libhardware.so, liblog.so, libm.so, libnativewindow.so, libsync.so, libz.so. Leur disponibilité dans l’espace de chargement de l’application reste à tester sur appareil.
+Limites : aucune exécution sur téléphone, aucun test de jeux/Vulkan CTS, aucun workflow lancé sur GitHub et aucune publication GitHub effectuée. Compilation réussie ne signifie pas compatibilité matérielle garantie.
+Verdict : problèmes identifiés du projet corrigés et contrôles locaux réussis ; validation Android et publication CI à réaliser dans leurs environnements respectifs.

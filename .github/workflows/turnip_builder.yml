@@ -1,54 +1,106 @@
-name: Build "turnip_a660"
-
+name: Build Turnip Android ARM64
 on:
   workflow_dispatch:
   schedule:
-  - cron: "20 5 1,15 * *"
-
+    - cron: '20 5 1,15 * *'
 permissions:
-  contents: write
-
+  contents: read
+concurrency:
+  group: turnip-release
+  cancel-in-progress: false
 jobs:
-  start_building_turnip:
+  build:
     runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    permissions:
+      contents: write
     steps:
-    - uses: actions/checkout@v3
-
-    - name: Prepare environment
-      run: |
-        sudo sed -i 's/^Types: deb$/Types: deb deb-src/' /etc/apt/sources.list.d/ubuntu.sources
-        sudo apt update
-        sudo apt build-dep mesa -y
-        sudo apt install -y meson ninja-build
-
-    - name: Execute build script
-      run: bash ./turnip_a660_final.sh
-
-    - name: Create update.json
-      run: |
-        cat <<EOF >"turnip_workdir/update.json"
-        {
-          "versionCode": "$(cat turnip_workdir/mesa-main/VERSION | tr -cd '0-9')",
-          "version": "$(cat turnip_workdir/mesa-main/VERSION)",
-          "zipUrl": "https://github.com/${{ github.repository }}/releases/download/github_run/turnip_a660_final_adrenotools.zip",
-          "changelog": "https://raw.githubusercontent.com/${{ github.repository }}/refs/heads/main/changelog.md"
-        }
-        EOF
-
-    - name: Upload build logs
-      uses: actions/upload-artifact@v4
-      with:
-        name: meson-ninja-logs
-        path: |
-          turnip_workdir/ninja_log
-          turnip_workdir/mesa-main/build-android-aarch64/meson-logs/meson-log.txt
-
-    - name: Release "turnip"
-      uses: softprops/action-gh-release@v1
-      with:
-        body: Turnip driver package for adrenotools - Adreno 660, built from Mesa main
-        tag_name: github_run
-        name: Weekly Action Release
-        files: |
-           turnip_workdir/update.json
-           turnip_workdir/turnip_a660_final_adrenotools.zip
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Install host dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends build-essential python3-venv \
+            curl ca-certificates patchelf pkg-config flex bison glslang-tools
+      - name: Regression checks
+        run: |
+          bash -n turnip_builder.sh
+          python3 -m unittest discover -s tests -v
+      - name: Build and validate package
+        id: driver
+        env:
+          JOBS: '4'
+        run: bash ./turnip_builder.sh
+      - name: Create update manifest
+        env:
+          RUN_DIR: ${{ steps.driver.outputs.run_dir }}
+          REPOSITORY: ${{ github.repository }}
+          SOURCE_COMMIT: ${{ github.sha }}
+          RELEASE_TAG: turnip-${{ github.run_id }}-${{ github.run_attempt }}
+        run: |
+          python3 - <<'PY'
+          import json, os
+          from pathlib import Path
+          root = Path(os.environ['RUN_DIR'])
+          info = json.loads((root / 'build-info.json').read_text())
+          repository, tag = os.environ['REPOSITORY'], os.environ['RELEASE_TAG']
+          data = {
+              'versionCode': info['versionCode'],
+              'version': info['version'] + '-' + info['mesaCommit'][:12],
+              'zipUrl': f'https://github.com/{repository}/releases/download/{tag}/turnip_a660_final_adrenotools.zip',
+              'changelog': f'https://raw.githubusercontent.com/{repository}/{os.environ["SOURCE_COMMIT"]}/changelog.md',
+          }
+          (root / 'update.json').write_text(json.dumps(data, indent=2) + '\n')
+          PY
+      - name: Preserve logs including failed builds
+        if: ${{ always() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: turnip-logs-${{ github.run_id }}-${{ github.run_attempt }}
+          if-no-files-found: warn
+          path: |
+            turnip_workdir/run-*/*.log
+            turnip_workdir/run-*/build/meson-logs/**
+            turnip_workdir/run-*/*.ini
+            turnip_workdir/run-*/build-info.json
+      - name: Preserve validated package
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: turnip-package-${{ github.run_id }}-${{ github.run_attempt }}
+          if-no-files-found: error
+          path: |
+            ${{ steps.driver.outputs.package }}
+            ${{ steps.driver.outputs.run_dir }}/update.json
+            ${{ steps.driver.outputs.run_dir }}/build-info.json
+            ${{ steps.driver.outputs.package }}.sha256
+      - name: Publish immutable build
+        if: ${{ github.ref == 'refs/heads/main' }}
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
+        with:
+          tag_name: turnip-${{ github.run_id }}-${{ github.run_attempt }}
+          target_commitish: ${{ github.sha }}
+          name: Turnip build ${{ github.run_number }} (attempt ${{ github.run_attempt }})
+          body_path: changelog.md
+          prerelease: true
+          fail_on_unmatched_files: true
+          files: |
+            ${{ steps.driver.outputs.package }}
+            ${{ steps.driver.outputs.package }}.sha256
+            ${{ steps.driver.outputs.run_dir }}/build-info.json
+            ${{ steps.driver.outputs.run_dir }}/update.json
+      - name: Update compatibility release
+        if: ${{ github.ref == 'refs/heads/main' }}
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
+        with:
+          tag_name: github_run
+          target_commitish: ${{ github.sha }}
+          name: Turnip scheduled or manual build
+          body_path: changelog.md
+          prerelease: true
+          fail_on_unmatched_files: true
+          files: |
+            ${{ steps.driver.outputs.package }}
+            ${{ steps.driver.outputs.package }}.sha256
+            ${{ steps.driver.outputs.run_dir }}/build-info.json
+            ${{ steps.driver.outputs.run_dir }}/update.json
