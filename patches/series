@@ -1,0 +1,3 @@
+# Une entrée par ligne, nom de fichier relatif à patches/, dans l'ordre d'application.
+# Lignes vides et lignes commencant par # ignorees. Format attendu : diff -u, niveau -p1.
+# Aucun correctif par defaut : fichier intentionnellement vide de contenu actif.

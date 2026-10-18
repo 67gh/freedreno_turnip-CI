@@ -44,8 +44,17 @@ indiquer des ZIP locaux ; les mêmes empreintes restent exigées.
 
 Les anciens dossiers de travail peuvent être supprimés manuellement après avoir
 conservé les logs utiles. Ne pas supprimer un dossier pendant sa compilation.
-Le répertoire `patches/` est réservé : des fichiers autres que `.gitkeep` provoquent
-un refus explicite, car aucune série de patches n’est intégrée dans cette version.
+
+Le répertoire `patches/` accepte des correctifs `.patch` (format `diff -u`,
+niveau `-p1`) appliqués sur la source Mesa après téléchargement, avant la
+compilation. Un fichier `.patch` présent sans être listé dans `patches/series`
+provoque un refus explicite au préflight : aucun correctif n’est appliqué en
+silence. `patches/series` liste un nom de fichier par ligne, dans l’ordre
+d’application ; les lignes vides et celles commençant par `#` sont ignorées.
+Chaque correctif est d’abord vérifié en mode `--dry-run` contre le commit Mesa
+figé ci-dessus ; un rejet de hunk arrête la compilation avant toute étape
+Meson. Le détail des vérifications et applications est conservé dans
+`patches.log` du dossier d’exécution. Aucun correctif n’est fourni par défaut.
 
 ## Installer et diagnostiquer
 

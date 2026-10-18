@@ -140,3 +140,27 @@ SHA-256 ZIP pilote : d106c6e9e942d5661639a5aaa6d5616de4e82d3ec90d7aa12acb1cd65e5
 Dépendances dynamiques observées : libc.so, libdl.so, libhardware.so, liblog.so, libm.so, libnativewindow.so, libsync.so, libz.so. Leur disponibilité dans l’espace de chargement de l’application reste à tester sur appareil.
 Limites : aucune exécution sur téléphone, aucun test de jeux/Vulkan CTS, aucun workflow lancé sur GitHub et aucune publication GitHub effectuée. Compilation réussie ne signifie pas compatibilité matérielle garantie.
 Verdict : problèmes identifiés du projet corrigés et contrôles locaux réussis ; validation Android et publication CI à réaliser dans leurs environnements respectifs.
+
+turnip_builder.sh — cycle patches-series 1 (18 octobre 2026)
+Analyse avant modification : section 01 et section 07 du journal d'analyse relues ; le refus inconditionnel de patches/ était documenté comme une infrastructure d'application absente, pas comme un choix définitif.
+Relecture 1 : preflight() détecte désormais les *.patch non déclarés dans patches/series et les entrées series pointant vers un fichier absent ; apply_patches() s'exécute après prepare() (SOURCE défini) et avant build().
+Relecture 2 : série vide avec patch présent -> échec ; patch non listé -> échec ; entrée series fantôme -> échec ; un hunk rejeté en --dry-run arrête avant toute étape Meson, aucun correctif partiel n'est appliqué.
+Relecture 3 : `patch` ajouté à la liste de prérequis de preflight/--check ; comportement par défaut (dossier vide) inchangé ; aucun correctif fourni par défaut.
+SHA-256 : 5200e04041f81968e4bbb5c0a4647ba9a3dad02975fd4aabd2bf7f0826a97c47
+Verdict : logique de détection/déclaration testée isolément en bac à sable (5 scénarios : aucun patch, patch non déclaré, patch déclaré, série vers fichier absent, deux patches ordonnés) — comportements conformes. bash -n : syntaxe valide. Application réelle sur source Mesa, compilation et essai matériel NON effectués : aucun correctif .patch n'existe encore pour les tester en conditions réelles.
+
+README.md — cycle patches-series 1 (18 octobre 2026)
+Analyse avant modification : section 03 relue ; le paragraphe décrivant patches/ comme strictement refusé devenait inexact après l'ajout de apply_patches().
+Relecture 1 : nouveau paragraphe décrit le format series/.patch (diff -u, -p1) sans promettre de gain de performance ni de compatibilité.
+Relecture 2 : cohérence confirmée avec le refus préflight et patches.log introduits dans turnip_builder.sh.
+Relecture 3 : reste de la section (compilation locale, GitHub Actions, logs) non affecté, aucune contradiction introduite ailleurs dans le fichier.
+SHA-256 : 5602d23f7c14820fafb5200d1653291a7f16903bbb6b8c8937d09dccb6779cc9
+Verdict : trois relectures complètes effectuées ; cohérence texte/script vérifiée manuellement ; publication/appareil non testés.
+
+patches/series — nouveau fichier (18 octobre 2026)
+Rôle et risques consignés avant création : manifeste listant, un nom par ligne et dans l'ordre d'application, les correctifs déclarés sous patches/. Risque identifié : un series mal ordonné appliquerait des correctifs dépendants dans le mauvais ordre sans qu'aucun outil ne détecte cette dépendance logique — seule la relecture humaine de chaque série future peut le garantir. Risque secondaire écarté par construction : un .patch ajouté sans entrée correspondante est rejeté au préflight, pas appliqué silencieusement.
+Relecture 1 : syntaxe (lignes vides et # ignorées) alignée sur la lecture faite par preflight()/apply_patches() dans turnip_builder.sh.
+Relecture 2 : fichier livré sans entrée active ; n'a aucun effet sur un build sans patch.
+Relecture 3 : cohérent avec le nouveau paragraphe de README.md.
+SHA-256 : aa5799ec933eae153f726bfc2d91318248bea799ba3bbbd48ffe61980bcb39ab
+Verdict : fichier intentionnellement inerte ; infrastructure prête, aucun correctif A660 encore fourni ni testé.

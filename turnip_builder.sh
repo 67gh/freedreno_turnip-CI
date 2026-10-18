@@ -40,7 +40,7 @@ checked_archive() {
 preflight() {
     [[ $(uname -s) == Linux && $(uname -m) == x86_64 ]] || fail 'Linux x86_64 is required.'
     local tool missing=0
-    for tool in python3 curl sha256sum patchelf pkg-config cc c++ ar strip flex bison glslangValidator; do
+    for tool in python3 curl sha256sum patchelf pkg-config cc c++ ar strip flex bison glslangValidator patch; do
         if ! command -v "$tool" >/dev/null 2>&1; then
             printf 'Missing tool: %s\n' "$tool" >&2
             missing=1
@@ -49,9 +49,40 @@ preflight() {
     (( missing == 0 )) || fail 'Install the dependencies listed in README.md.'
     [[ ${JOBS:-4} =~ ^[1-9][0-9]*$ ]] || fail 'JOBS must be a positive integer.'
     [[ "$SCRIPT_DIR" != *"'"* && "$SCRIPT_DIR" != *$'\n'* && "$SCRIPT_DIR" != *'\'* ]] || fail 'Unsupported characters in project path.'
-    local patch_files
-    patch_files=$(find "$SCRIPT_DIR/patches" -type f ! -name .gitkeep -print)
-    [[ -z "$patch_files" ]] || fail 'patches/ contains unapplied files; integrate and review the series explicitly.'
+    local series="$SCRIPT_DIR/patches/series" patch_files=() f
+    while IFS= read -r -d '' f; do patch_files+=("$f"); done < \
+        <(find "$SCRIPT_DIR/patches" -maxdepth 1 -type f -name '*.patch' -print0 | sort -z)
+    if (( ${#patch_files[@]} > 0 )); then
+        [[ -s "$series" ]] || fail 'patches/*.patch present but patches/series is missing or empty; declare the series explicitly.'
+        local series_entries=() line base declared
+        while IFS= read -r line; do
+            [[ -z "$line" || "$line" == \#* ]] && continue
+            [[ -f "$SCRIPT_DIR/patches/$line" ]] || fail "patches/series lists '$line', which does not exist."
+            series_entries+=("$line")
+        done < "$series"
+        for f in "${patch_files[@]}"; do
+            base=$(basename -- "$f"); declared=0
+            for line in "${series_entries[@]}"; do [[ "$line" == "$base" ]] && { declared=1; break; }; done
+            (( declared == 1 )) || fail "patches/$base is present but not declared in patches/series."
+        done
+    fi
+}
+apply_patches() {
+    local series="$SCRIPT_DIR/patches/series" line
+    [[ -s "$series" ]] || { printf 'No declared patches.\n'; return; }
+    while IFS= read -r line; do
+        [[ -z "$line" || "$line" == \#* ]] && continue
+        printf 'Checking patch: %s\n' "$line" | tee -a "$RUN_DIR/patches.log"
+        patch --batch --forward --strip=1 --directory="$SOURCE" --dry-run \
+            < "$SCRIPT_DIR/patches/$line" >> "$RUN_DIR/patches.log" \
+            || fail "Patch does not apply cleanly against $MESA_COMMIT: $line"
+    done < "$series"
+    while IFS= read -r line; do
+        [[ -z "$line" || "$line" == \#* ]] && continue
+        printf 'Applying patch: %s\n' "$line" | tee -a "$RUN_DIR/patches.log"
+        patch --batch --forward --strip=1 --directory="$SOURCE" \
+            < "$SCRIPT_DIR/patches/$line" >> "$RUN_DIR/patches.log"
+    done < "$series"
 }
 prepare() {
     mkdir -p -- "$SCRIPT_DIR/turnip_workdir"
@@ -150,6 +181,7 @@ main() {
     esac
     preflight
     prepare
+    apply_patches
     build
     package
 }
